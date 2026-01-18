@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor.PackageManager.Requests;
 using UnityEngine;
 
 
@@ -15,9 +16,15 @@ public class AStarNode
 
     public AStarNode Parent;
 
+
     public AStarNode(Vector2Int pos)
     {
         m_Pos = pos;
+        Reset();
+    }
+
+    public void Reset()
+    {
         G = float.PositiveInfinity;  // 初始化为无限大，避免首次比较错误
         H = 0;
         Parent = null;
@@ -34,10 +41,10 @@ public class AStarMinHeap
 
     public int Count => m_HeapList.Count;
 
-    public AStarMinHeap()
+    public AStarMinHeap(int capacity)
     {
-        m_HeapList = new List<AStarNode>();
-        m_NodeIndexDict = new Dictionary<Vector2Int, int>();
+        m_HeapList = new List<AStarNode>(capacity);
+        m_NodeIndexDict = new Dictionary<Vector2Int, int>(capacity);
     }
 
     public void Clear()
@@ -152,26 +159,46 @@ public class AStarFindPath
     private HashSet<Vector2Int> m_CloseList; // CloseList 哈希表，用坐标即可
     private IWalkable m_Walkable;
 
+    // GC优化
+    private AStarNode[] m_AllAStarNodes; // 根据地图大小全部初始化
+    private (int minX, int minY, int width) m_GridInfo;
+    private List<Vector2Int> m_ResultPath; // 重复使用的最终结果路径列表
+    private List<Vector2Int> m_TempPath; // 重复使用的临时路径列表
+
+
     public AStarFindPath()
     {
-        m_OpenList = new AStarMinHeap();
-        m_CloseList = new HashSet<Vector2Int>();
         m_Walkable = null;
     }
 
-    public AStarNode GetMinFNode(List<AStarNode> openList)
+    public void Init((int minX, int minY, int maxX, int maxY) mapRange)
     {
-        int minIndex = 0;
-        for(int i=1;i<openList.Count;i++)
+        (int minX, int minY, int maxX, int maxY) = mapRange;
+        int width = maxX - minX + 1;
+        int height = maxY - minY + 1;
+        int count = width * height;
+
+        m_AllAStarNodes = new AStarNode[count];
+        for (int i = 0; i < count; i++)
         {
-            if (openList[i].F < openList[minIndex].F)
-            {
-                minIndex = i;
-            }
+            int gridX = minX + i % width;
+            int gridY = minY + i / width;
+            m_AllAStarNodes[i] = new AStarNode(new Vector2Int(gridX, gridY));
         }
-        var node = openList[minIndex];
-        openList.RemoveAt(minIndex);
-        return node;
+        m_GridInfo = new(minX, minY, width);
+
+        int capacity = Mathf.CeilToInt(count * 1.4f); // dict和hashset负载因子0.72  1/0.72=1.39
+        m_OpenList = new AStarMinHeap(capacity);
+        m_CloseList = new HashSet<Vector2Int>(capacity);
+
+        m_ResultPath = new List<Vector2Int>(width); // 不用很大
+        m_TempPath = new List<Vector2Int>(width);
+    }
+
+    public AStarNode FetchAStarNode(int gridX, int gridY)
+    {
+        int index = (gridY - m_GridInfo.minY) * m_GridInfo.width + (gridX - m_GridInfo.minX);
+        return m_AllAStarNodes[index];
     }
 
     public float CalculateG(AStarNode cur, AStarNode neighbor)
@@ -200,16 +227,22 @@ public class AStarFindPath
     /// <returns></returns>
     public List<Vector2Int> FindPath(Vector2Int startGrid, Vector2Int targetGrid, IWalkable walkableInterface = null)
     {
+        m_ResultPath.Clear();
+        for(int i=0;i<m_AllAStarNodes.Length;i++)
+        {
+            m_AllAStarNodes[i].Reset();
+        }
 
         float startTime1 = Time.realtimeSinceStartup;
 
         m_Walkable = walkableInterface;
         if (startGrid == targetGrid)
         {
-            return new List<Vector2Int>() { startGrid };
+            m_ResultPath.Add(startGrid);
+            return m_ResultPath;
         }
-        var startNode = new AStarNode(startGrid);
-        var targetNode = new AStarNode(targetGrid);
+        var startNode = FetchAStarNode(startGrid.x, startGrid.y);
+        var targetNode = FetchAStarNode(targetGrid.x, targetGrid.y);
 
         var openList = m_OpenList;
         openList.Clear();
@@ -228,21 +261,21 @@ public class AStarFindPath
             // 到达目标点
             if (curNode.X == targetNode.X && curNode.Y == targetNode.Y)
             {
-                var path = GenerateResultPath(curNode);
-                Debug.Log($"A*核心 生成路径耗时 {(Time.realtimeSinceStartup - startTime1) * 1000:F3}ms");
+                GenerateResultPath(curNode);
+                //Debug.Log($"A*核心 生成路径耗时 {(Time.realtimeSinceStartup - startTime1) * 1000:F3}ms");
                 float startTime2 = Time.realtimeSinceStartup;
-                path = PathOptimization(path);
-                Debug.Log($"A* 路径优化 {(Time.realtimeSinceStartup - startTime2) * 1000:F3}ms");
-                return path;
+                PathOptimization();
+                //Debug.Log($"A* 路径优化耗时 {(Time.realtimeSinceStartup - startTime2) * 1000:F3}ms");
+                return m_ResultPath;
             }
 
             // 八方向邻居
-            var directionEight = MapUtil.DIRECTION_EIGHT;
+            var directionEight = DirectionDefine.Eight;
             var directionCount = directionEight.GetLength(0);
             for (int i = 0; i < directionCount; i++)
             {
                 // walkable判断
-                var neighborNode = new AStarNode(new Vector2Int(curNode.X + directionEight[i, 0], curNode.Y + directionEight[i, 1]));
+                var neighborNode = FetchAStarNode(curNode.X + directionEight[i, 0], curNode.Y + directionEight[i, 1]);
                 if (walkableInterface != null && !walkableInterface.IsWalkable(neighborNode.X, neighborNode.Y))
                 {
                     continue;
@@ -267,7 +300,7 @@ public class AStarFindPath
                 }
             }
         }
-        return null;
+        return m_ResultPath;
     }
 
     /// <summary>
@@ -275,81 +308,73 @@ public class AStarFindPath
     /// </summary>
     /// <param name="node"></param>
     /// <returns></returns>
-    public List<Vector2Int> GenerateResultPath(AStarNode node)
+    public void GenerateResultPath(AStarNode node)
     {
-        var path = new List<Vector2Int>();
         while (node != null)
         {
-            path.Add(node.Pos);
+            m_ResultPath.Add(node.Pos);
             node = node.Parent;
         }
-        path.Reverse();
-        return path;
+        m_ResultPath.Reverse();
     }
 
-    public List<Vector2Int> PathOptimization(List<Vector2Int> path)
+    public void PathOptimization()
     {
-        path = ReduceCollinearPoints(path);
-        path = ThickLOSSmoothing(path);
-        path = TrimStartPoint(path);
-        return path;
+        ReduceCollinearPoints();
+        ThickLOSSmoothing();
+        TrimStartPoint();
     }
 
     /// <summary>
     /// step1.路径简化，共线点删除：斜率的多个点相同只保留两个端点，删掉多余点，大幅度减少后续计算量
     /// </summary>
-    /// <param name="path"></param>
-    /// <returns></returns>
-    public List<Vector2Int> ReduceCollinearPoints(List<Vector2Int> path)
+    public void ReduceCollinearPoints()
     {
-        if (path == null || path.Count < 3)
+        if (m_ResultPath == null || m_ResultPath.Count < 3)
         {
-            return path;
+            return;
         }
-        var result = new List<Vector2Int>()
-        {
-            path[0]
-        };
 
-        var lastDir = path[1] - path[0];
-        for (int i = 2; i < path.Count; i++)
+        m_TempPath.Clear();
+
+        var lastDir = m_ResultPath[1] - m_ResultPath[0];
+        for (int i = 2; i < m_ResultPath.Count; i++)
         {
-            var curDir = path[i] - path[i - 1];
+            var curDir = m_ResultPath[i] - m_ResultPath[i - 1];
             if (curDir != lastDir) // 因为连续点都是VectorInt，所以向量不等则方向不同
             {
-                result.Add(path[i - 1]);
+                m_TempPath.Add(m_ResultPath[i - 1]);
                 lastDir = curDir;
             }
         }
 
-        result.Add(path[path.Count - 1]);
-        return result;
+        m_TempPath.Add(m_ResultPath[m_ResultPath.Count - 1]);
+
+        m_ResultPath.Clear();
+        m_ResultPath.AddRange(m_TempPath);
     }
 
 
     /// <summary>
     /// step2.贪心式LOS路径平滑：AC两点可以直达则可去掉中间点B，用Bresenham生成两点间的路径点同时考虑IsWalkable
     /// </summary>
-    /// <param name="path"></param>
-    /// <returns></returns>
-
-    public List<Vector2Int> ThickLOSSmoothing(List<Vector2Int> path)
+    public void ThickLOSSmoothing()
     {
-        if (path.Count <= 2)
+        if (m_ResultPath.Count <= 2)
         {
-            return path;
+            return;
         }
 
-        var result = new List<Vector2Int>();
+        m_TempPath.Clear();
         int start = 0;
-        var last = path.Count - 1;
+        var last = m_ResultPath.Count - 1;
         while (start < last)
         {
-            result.Add(path[start]);
+            m_TempPath.Add(m_ResultPath[start]);
             int end = start + 1; // 至少+1避免死循环
             for (int target = last; target > start + 1; target--)
             {
-                if (BresenhamLineCheck(path[start], path[target]))
+                if (BresenhamLineCheck(m_ResultPath[start], m_ResultPath[target]))
                 {
                     end = target;
                     break;
@@ -357,9 +382,10 @@ public class AStarFindPath
             }
             start = end;
         }
-        result.Add(path[last]);
+        m_TempPath.Add(m_ResultPath[last]);
 
-        return result;
+        m_ResultPath.Clear();
+        m_ResultPath.AddRange(m_TempPath);
     }
 
     /// <summary>
@@ -416,12 +442,11 @@ public class AStarFindPath
     /// </summary>
     /// <param name="path"></param>
     /// <returns></returns>
-    public List<Vector2Int> TrimStartPoint(List<Vector2Int> path)
+    public void TrimStartPoint()
     {
-        if (path.Count > 1)
+        if (m_ResultPath.Count > 1)
         {
-            path.RemoveAt(0);
+            m_ResultPath.RemoveAt(0);
         }
-        return path;
     }
 }

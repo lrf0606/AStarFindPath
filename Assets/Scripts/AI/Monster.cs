@@ -4,15 +4,15 @@ using UnityEngine;
 
 public class Monster : MonoBehaviour
 {
-    // �ƶ����
+    // 移动
     public float MoveSpeed = 3.0f;
     private List<Vector2Int> m_PathList;
     private int m_PathIndex;
     private IWalkable m_Walkalbe;
     public IWalkable Walkable => m_Walkalbe;
-    // ��ת���
+    // 旋转
     public float RotateSpeed = 360.0f;
-    // �뾶
+    // 半径
     public float Radius = 0f;
     
 
@@ -37,7 +37,7 @@ public class Monster : MonoBehaviour
 
         var targetPos = MapUtil.Grid2WorldPos(m_PathList[m_PathIndex], transform.position.y);
 
-        // ����
+        // 旋转
         var direction = targetPos - transform.position;
         if (direction.sqrMagnitude > 0.001f)
         {
@@ -45,7 +45,7 @@ public class Monster : MonoBehaviour
             transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, RotateSpeed * Time.deltaTime);
         }
 
-        // �ƶ�
+        // 移动
         transform.position = Vector3.MoveTowards(transform.position, targetPos, MoveSpeed * Time.deltaTime);
         if ((transform.position - targetPos).sqrMagnitude < 0.001f)
         {
@@ -65,7 +65,7 @@ public class Monster : MonoBehaviour
         {
             return;
         }
-        // ��ռ�ĸ���
+        // 画占格大小
         int inflate = Mathf.CeilToInt(Radius / MapUtil.GRID_SIZE);
         Vector2Int centerGrid = MapUtil.WorldPos2Grid(transform.position);
         Gizmos.color = Color.red;
@@ -77,7 +77,7 @@ public class Monster : MonoBehaviour
                 Gizmos.DrawWireCube(pos, Vector3.one * MapUtil.GRID_SIZE);
             }
         }
-        // ��·����·���㻭����֮������
+        // 画路径点和路线
         if (m_PathList != null && m_PathList.Count > 0)
         {
             Gizmos.color = Color.black;

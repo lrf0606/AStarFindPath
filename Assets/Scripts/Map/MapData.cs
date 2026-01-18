@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -15,29 +14,29 @@ public class MapData
         } 
     }
 
-    private Dictionary<Vector2Int, MapFlags> m_MapFlagsDict;
+
     private (int minX, int minY, int maxX, int maxY) m_MapRange;
     public (int minX, int minY, int maxX, int maxY) MapRange => m_MapRange;
 
+
+    private Dictionary<Vector2Int, MapFlags> m_MapFlagsDict;
+
     private MapData()
     {
-        m_MapFlagsDict = new Dictionary<Vector2Int, MapFlags>();
         m_MapRange = new(0, 0, 0, 0);
+        m_MapFlagsDict = new Dictionary<Vector2Int, MapFlags>();
     }
 
     public MapFlags GetFlags(int x, int y)
     {
-        if (m_MapFlagsDict.TryGetValue(new Vector2Int(x, y), out var flags))
+        var key = new Vector2Int(x, y);
+        if (m_MapFlagsDict.TryGetValue(key, out var flags))
         {
             return flags;
         }
         return MapFlags.None;
     }
 
-    public bool HasFlag(int x, int y, MapFlags flag)
-    {
-        return (GetFlags(x, y) & flag) != 0;
-    }
 
     public void AddFlag(int x, int y, MapFlags flag)
     {
@@ -71,10 +70,10 @@ public class MapData
 
     public void UpdateMapRange(Vector2Int minGrid, Vector2Int maxGrid)
     {
-        m_MapRange.minX = Mathf.Min(minGrid.x, m_MapRange.Item1);
-        m_MapRange.minY = Mathf.Min(minGrid.y, m_MapRange.Item2);
-        m_MapRange.maxX = Mathf.Max(maxGrid.x, m_MapRange.Item3);
-        m_MapRange.maxY = Mathf.Max(maxGrid.y, m_MapRange.Item4);
+        m_MapRange.minX = Mathf.Min(minGrid.x, m_MapRange.minX);
+        m_MapRange.minY = Mathf.Min(minGrid.y, m_MapRange.minY);
+        m_MapRange.maxX = Mathf.Max(maxGrid.x, m_MapRange.maxX);
+        m_MapRange.maxY = Mathf.Max(maxGrid.y, m_MapRange.maxY);
     }
 }
 

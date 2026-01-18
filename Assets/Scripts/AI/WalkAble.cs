@@ -14,14 +14,16 @@ public class CompositeWalkable : IWalkable
         m_Radius = Mathf.CeilToInt(radius / MapUtil.GRID_SIZE);
     }
 
-
     private bool CanStand(int x, int y)
     {
-        if (!MapData.Instance.HasFlag(x, y, MapFlags.Ground))  // 必须行走在Ground上
+        var flags = MapData.Instance.GetFlags(x, y);
+        // 有Obstacle Hole Player Monster都不可通过
+        if ((flags & MapFlags.Obstacle) != 0 || (flags & MapFlags.Hole) != 0 || (flags & MapFlags.Player) != 0 || (flags & MapFlags.Monster) != 0)
         {
             return false;
         }
-        if (MapData.Instance.HasFlag(x, y, MapFlags.Obstacle)) // 有Obstacle无法通过
+        // 没有Ground不可通过
+        if ((flags & MapFlags.Ground) == 0)
         {
             return false;
         }
@@ -47,7 +49,7 @@ public class CompositeWalkable : IWalkable
         else
         {
             // 半径为0时，无法进行半径扩张，取上下左右四个格子
-            var directionFour = MapUtil.DIRECTION_FOUR;
+            var directionFour = DirectionDefine.Four;
             for (int i = 0; i < directionFour.GetLength(0); i++)
             {
                 if (!CanStand(x + directionFour[i, 0], y + directionFour[i, 1]))

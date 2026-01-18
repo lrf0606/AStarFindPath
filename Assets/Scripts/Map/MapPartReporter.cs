@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 
@@ -27,10 +26,10 @@ public class MapPartReporter : MonoBehaviour
         {
             for (int y = m_MinGrid.y; y <= m_MaxGrid.y; y++)
             {
-                MapData.Instance.AddFlag(x, y, MapUtil.Layer2MapFlags(gameObject.layer));
+                MapData.Instance.AddFlag(x, y, (MapFlags)(1 << gameObject.layer));
             }
         }
-        if (gameObject.layer == LayerMask.NameToLayer("Ground"))
+        if (gameObject.layer == LayerDefine.Layer_Ground)
         {
             MapData.Instance.UpdateMapRange(m_MinGrid, m_MaxGrid);
         }
@@ -43,7 +42,7 @@ public class MapPartReporter : MonoBehaviour
         {
             for (int y = m_MinGrid.y; y <= m_MaxGrid.y; y++)
             {
-                MapData.Instance.RemoveFlag(x, y, MapUtil.Layer2MapFlags(gameObject.layer));
+                MapData.Instance.RemoveFlag(x, y, (MapFlags)(1<<gameObject.layer));
             }
         }
     }
@@ -58,7 +57,7 @@ public class MapPartReporter : MonoBehaviour
         {
             CalculateGridRange();
         }
-        if (gameObject.layer == LayerMask.NameToLayer("Obstacle"))
+        if (gameObject.layer == LayerDefine.Layer_Obstacle)
         {
             Gizmos.color = Color.yellow;
         }

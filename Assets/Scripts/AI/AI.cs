@@ -10,11 +10,13 @@ public class AI : MonoBehaviour
     private void Awake()
     {
         m_FindPath = new AStarFindPath();
+        
     }
 
     private void Start()
     {
         Application.targetFrameRate = 60;
+        m_FindPath.Init(MapData.Instance.MapRange);
     }
 
     public void MonsterFindPath(Vector3 targetPos)
@@ -30,27 +32,27 @@ public class AI : MonoBehaviour
         var pathList = m_FindPath.FindPath(startGrid, targetGrid, monsterComp.Walkable);
         if (pathList == null)
         {
+      //      Debug.Log("寻路结束pathList=null");
             return;
         }
-        Debug.Log($"FindPath结束 耗时{(Time.realtimeSinceStartup - startTime) * 1000:F2}ms");
+     //   Debug.Log($"寻路结束耗时{(Time.realtimeSinceStartup - startTime) * 1000:F2}ms");
         monsterComp.SetPath(pathList);
     }
 
     // Update is called once per frame
     void Update()
     {
-        /*
         if (Input.GetMouseButtonUp(0))
         {
             var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
-            var mask = LayerMask.GetMask("Ground");
+            var mask = 1 << LayerDefine.Layer_Ground;
             if (Physics.Raycast(ray, out hit, Mathf.Infinity, mask))
             {
                 var targetPos = hit.point;
                 MonsterFindPath(targetPos);
             }
-        }*/
+        }
 
         if (Input.GetKeyUp(KeyCode.Space))
         {
@@ -60,21 +62,9 @@ public class AI : MonoBehaviour
 
     public void TestFindPath()
     {
-        if (Monster == null)
-        {
-            return;
-        }
         var startPos = new Vector3(40, 1, 0);
         var targetPos = new Vector3(-40, 1, 0);
         Monster.transform.position = startPos;
-        var monsterComp = Monster.GetComponent<Monster>();
-        float startTime = Time.realtimeSinceStartup;
-        var pathList = m_FindPath.FindPath(MapUtil.WorldPos2Grid(startPos), MapUtil.WorldPos2Grid(targetPos), monsterComp.Walkable);
-        if (pathList == null)
-        {
-            return;
-        }
-        Debug.Log($"FindPath结束 起点{startPos}终点{targetPos}耗时{(Time.realtimeSinceStartup - startTime) * 1000:F3}ms"); // 10-11ms
-        monsterComp.SetPath(pathList);
+        MonsterFindPath(targetPos);
     }
 }

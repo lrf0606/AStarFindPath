@@ -7,7 +7,6 @@ public interface IWalkable
 
 public class CompositeWalkable : IWalkable
 {
-    private readonly int[,] m_DirectionFour = { { 0, 1 }, { 0, -1 }, { -1, 0 }, { 1, 0 } };
     private int m_Radius;
 
     public CompositeWalkable(float radius)
@@ -18,11 +17,11 @@ public class CompositeWalkable : IWalkable
 
     private bool CanStand(int x, int y)
     {
-        if (!MapData.Instance.HasFlag(x, y, MapFlags.Ground))  // ����������Ground��
+        if (!MapData.Instance.HasFlag(x, y, MapFlags.Ground))  // 必须行走在Ground上
         {
             return false;
         }
-        if (MapData.Instance.HasFlag(x, y, MapFlags.Obstacle)) // ��Obstacle�޷�ͨ��
+        if (MapData.Instance.HasFlag(x, y, MapFlags.Obstacle)) // 有Obstacle无法通过
         {
             return false;
         }
@@ -33,7 +32,7 @@ public class CompositeWalkable : IWalkable
     {
         if (m_Radius > 0)
         {
-            // �뾶���ţ����뾶Ϊ(0,1]��GRID_SIZEʱ��ռ3*3���ӣ�(1,2]ʱռ5*5����
+            // 半径扩张，当半径为(0,1]个GRID_SIZE时，占3*3格子，(1,2]时占5*5格子
             for (int dx = -m_Radius; dx <= m_Radius; dx++)
             {
                 for (int dy = -m_Radius; dy <= m_Radius; dy++)
@@ -47,10 +46,11 @@ public class CompositeWalkable : IWalkable
         }
         else
         {
-            // �뾶Ϊ0ʱ���޷����а뾶���ţ�ȡ���������ĸ�����
-            for (int i = 0; i < m_DirectionFour.GetLength(0); i++)
+            // 半径为0时，无法进行半径扩张，取上下左右四个格子
+            var directionFour = MapUtil.DIRECTION_FOUR;
+            for (int i = 0; i < directionFour.GetLength(0); i++)
             {
-                if (!CanStand(x + m_DirectionFour[i,0], y+ m_DirectionFour[i,1]))
+                if (!CanStand(x + directionFour[i, 0], y + directionFour[i, 1]))
                 {
                     return false;
                 }

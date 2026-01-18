@@ -4,15 +4,15 @@ using UnityEngine;
 
 public class Monster : MonoBehaviour
 {
-    // ÒÆ¶¯Ïà¹Ø
+    // ï¿½Æ¶ï¿½ï¿½ï¿½ï¿½
     public float MoveSpeed = 3.0f;
     private List<Vector2Int> m_PathList;
     private int m_PathIndex;
     private IWalkable m_Walkalbe;
     public IWalkable Walkable => m_Walkalbe;
-    // Ðý×ªÏà¹Ø
+    // ï¿½ï¿½×ªï¿½ï¿½ï¿½
     public float RotateSpeed = 360.0f;
-    // °ë¾¶
+    // ï¿½ë¾¶
     public float Radius = 0f;
     
 
@@ -37,7 +37,7 @@ public class Monster : MonoBehaviour
 
         var targetPos = MapUtil.Grid2WorldPos(m_PathList[m_PathIndex], transform.position.y);
 
-        // ³¯Ïò
+        // ï¿½ï¿½ï¿½ï¿½
         var direction = targetPos - transform.position;
         if (direction.sqrMagnitude > 0.001f)
         {
@@ -45,7 +45,7 @@ public class Monster : MonoBehaviour
             transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, RotateSpeed * Time.deltaTime);
         }
 
-        // ÒÆ¶¯
+        // ï¿½Æ¶ï¿½
         transform.position = Vector3.MoveTowards(transform.position, targetPos, MoveSpeed * Time.deltaTime);
         if ((transform.position - targetPos).sqrMagnitude < 0.001f)
         {
@@ -65,7 +65,7 @@ public class Monster : MonoBehaviour
         {
             return;
         }
-        // »­Õ¼µÄ¸ñ×Ó
+        // ï¿½ï¿½Õ¼ï¿½Ä¸ï¿½ï¿½ï¿½
         int inflate = Mathf.CeilToInt(Radius / MapUtil.GRID_SIZE);
         Vector2Int centerGrid = MapUtil.WorldPos2Grid(transform.position);
         Gizmos.color = Color.red;
@@ -77,7 +77,7 @@ public class Monster : MonoBehaviour
                 Gizmos.DrawWireCube(pos, Vector3.one * MapUtil.GRID_SIZE);
             }
         }
-        // »­Â·¾¶£¬Â·¾¶µã»­Çò£¬ÇòÖ®¼äÁ¬Ïß
+        // ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ã»­ï¿½ï¿½ï¿½ï¿½Ö®ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         if (m_PathList != null && m_PathList.Count > 0)
         {
             Gizmos.color = Color.black;

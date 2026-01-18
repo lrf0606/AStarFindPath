@@ -15,7 +15,9 @@ public enum MapFlags
 
 public static class MapUtil
 {
-    public static bool DEBUG_MAP = false;  // ÏÔÊ¾¸÷ÖÖlayer¶ÔÓ¦¸ñ×Ó·¶Î§
+    public static bool DEBUG_MAP = false;  // é„å‰§ãšéšå‹­î’layerç€µç‘°ç°²éç…ç“™é‘¼å†¨æ´¿
+    public static readonly int[,] DIRECTION_FOUR = { { 0, 1 }, { 0, -1 }, { -1, 0 }, { 1, 0 } };
+    public static readonly int[,] DIRECTION_EIGHT = { { 1, 1 }, { 1, -1 }, { 1, 0 }, { 0, 1 }, { 0, -1 }, { -1, 1 }, { -1, 0 }, { -1, -1 } };
 
     private static readonly Dictionary<int, MapFlags> m_Layer2MapFlags = new()
     {

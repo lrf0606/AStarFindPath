@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 
@@ -10,7 +11,6 @@ public class MapPartReporter : MonoBehaviour
     private void Awake()
     {
         CalculateGridRange();
-        
     }
 
     private void CalculateGridRange()
@@ -20,7 +20,7 @@ public class MapPartReporter : MonoBehaviour
         m_MaxGrid = new Vector2Int(Mathf.CeilToInt(bounds.max.x / MapUtil.GRID_SIZE) - 1, Mathf.CeilToInt(bounds.max.z / MapUtil.GRID_SIZE) - 1);
     }
 
-    // ¿ÉÓÃÊ±Ìí¼Ó×Ô¼ºµÄµØĞÎÊı¾İµ½MapDataÖĞ
+    // å¯ç”¨æ—¶æ·»åŠ è‡ªå·±çš„åœ°å½¢æ•°æ®åˆ°MapDataä¸­
     private void OnEnable()
     {
         for (int x = m_MinGrid.x; x <= m_MaxGrid.x; x++)
@@ -30,9 +30,13 @@ public class MapPartReporter : MonoBehaviour
                 MapData.Instance.AddFlag(x, y, MapUtil.Layer2MapFlags(gameObject.layer));
             }
         }
+        if (gameObject.layer == LayerMask.NameToLayer("Ground"))
+        {
+            MapData.Instance.UpdateMapRange(m_MinGrid, m_MaxGrid);
+        }
     }
 
-    // ²»¿ÉÓÃÊ±ÒÆ³ı×Ô¼ºµÄµØĞÎÊı¾İ
+    // ä¸å¯ç”¨æ—¶ç§»é™¤è‡ªå·±çš„åœ°å½¢æ•°æ®
     private void OnDisable()
     {
         for (int x = m_MinGrid.x; x <= m_MaxGrid.x; x++)

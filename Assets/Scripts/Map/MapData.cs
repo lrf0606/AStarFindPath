@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -15,10 +16,13 @@ public class MapData
     }
 
     private Dictionary<Vector2Int, MapFlags> m_MapFlagsDict;
+    private (int minX, int minY, int maxX, int maxY) m_MapRange;
+    public (int minX, int minY, int maxX, int maxY) MapRange => m_MapRange;
 
     private MapData()
     {
         m_MapFlagsDict = new Dictionary<Vector2Int, MapFlags>();
+        m_MapRange = new(0, 0, 0, 0);
     }
 
     public MapFlags GetFlags(int x, int y)
@@ -63,6 +67,14 @@ public class MapData
                 m_MapFlagsDict[key] = flags;
             }
         }
+    }
+
+    public void UpdateMapRange(Vector2Int minGrid, Vector2Int maxGrid)
+    {
+        m_MapRange.minX = Mathf.Min(minGrid.x, m_MapRange.Item1);
+        m_MapRange.minY = Mathf.Min(minGrid.y, m_MapRange.Item2);
+        m_MapRange.maxX = Mathf.Max(maxGrid.x, m_MapRange.Item3);
+        m_MapRange.maxY = Mathf.Max(maxGrid.y, m_MapRange.Item4);
     }
 }
 

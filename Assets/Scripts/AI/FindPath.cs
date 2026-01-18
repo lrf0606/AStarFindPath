@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -17,13 +18,14 @@ public class AStarNode
     public AStarNode(Vector2Int pos)
     {
         m_Pos = pos;
-        G = float.PositiveInfinity;  // ³õÊ¼»¯ÎªÎŞÏŞ´ó£¬±ÜÃâÊ×´Î±È½Ï´íÎó
+        G = float.PositiveInfinity;  // åˆå§‹åŒ–ä¸ºæ— é™å¤§ï¼Œé¿å…é¦–æ¬¡æ¯”è¾ƒé”™è¯¯
         H = 0;
+        Parent = null;
     }
 }
 
 /// <summary>
-/// ×îĞ¡¶ÑAStarNode¶¨ÖÆ°æ£¬¶ÑOpenList½øĞĞÓÅ»¯£¬È¡×îĞ¡F O(1)£¬Ìí¼ÓO(logn)£¬¸üĞÂO(logn)£¬ÅĞ¶ÏÊÇ·ñ´æÔÚO(1)
+/// æœ€å°å †AStarNodeå®šåˆ¶ç‰ˆï¼Œå †OpenListè¿›è¡Œä¼˜åŒ–ï¼Œå–æœ€å°F O(1)ï¼Œæ·»åŠ O(logn)ï¼Œæ›´æ–°O(logn)ï¼Œåˆ¤æ–­æ˜¯å¦å­˜åœ¨O(1)
 /// </summary>
 public class AStarMinHeap
 {
@@ -63,7 +65,7 @@ public class AStarMinHeap
         m_HeapList[0] = last;
         m_NodeIndexDict[last.Pos] = 0;
 
-        m_HeapList.RemoveAt(m_HeapList.Count - 1); // RemoveAt×îºóÒ»¸öÔªËØO(1)
+        m_HeapList.RemoveAt(m_HeapList.Count - 1); // RemoveAtæœ€åä¸€ä¸ªå…ƒç´ O(1)
         m_NodeIndexDict.Remove(min.Pos);
 
         if (m_HeapList.Count > 0)
@@ -80,7 +82,7 @@ public class AStarMinHeap
         {
             return;
         }
-        // ²»È·¶¨G±ä´ó»¹ÊÇ±äĞ¡£¬ÉÏ¸¡ºÍÏÂ³Á¶¼ÅĞ¶Ï£»Ò»°ãÇé¿öÏÂGÖ»»á±äĞ¡£¬Ö»ĞèÉÏ¸¡
+        // å¦‚æœåç»­ä¸ç¡®å®šGå˜å¤§è¿˜æ˜¯å˜å°ï¼Œä¸Šæµ®å’Œä¸‹æ²‰éƒ½åˆ¤æ–­ï¼›ä¸€èˆ¬æƒ…å†µä¸‹Gåªä¼šå˜å°ï¼Œåªéœ€ä¸Šæµ®ï¼›
         HeapifyUp(index);
         HeapifyDown(index);
     }
@@ -132,7 +134,6 @@ public class AStarMinHeap
         }
     }
 
-
     private void Swap(int i, int j)
     {
         var temp = m_HeapList[i];
@@ -142,17 +143,14 @@ public class AStarMinHeap
         m_NodeIndexDict[m_HeapList[i].Pos] = i;
         m_NodeIndexDict[m_HeapList[j].Pos] = j;
     }
-
-
 }
+
 
 public class AStarFindPath
 {
-    private readonly int[,] m_DirectionEight = { { 1, 1 }, { 1, -1 }, { 1, 0 }, { 0, 1 }, { 0, -1 }, { -1, 1 }, { -1, 0 }, { -1, -1 } };
-    private AStarMinHeap m_OpenList;  // OpenList ×îĞ¡¶Ñ
-    private HashSet<Vector2Int> m_CloseList; // CloseList ¹şÏ£±í£¬ÓÃ×ø±ê¼´¿É
+    private AStarMinHeap m_OpenList;  // OpenList æœ€å°å †
+    private HashSet<Vector2Int> m_CloseList; // CloseList å“ˆå¸Œè¡¨ï¼Œç”¨åæ ‡å³å¯
     private IWalkable m_Walkable;
-
 
     public AStarFindPath()
     {
@@ -178,12 +176,15 @@ public class AStarFindPath
 
     public float CalculateG(AStarNode cur, AStarNode neighbor)
     {
-        return cur.G + (neighbor.Pos - cur.Pos).magnitude; // ÕæÊµ¾àÀë
+        int dx = Math.Abs(neighbor.X - cur.X);
+        int dy = Math.Abs(neighbor.Y - cur.Y);
+        return cur.G + ((dx == 0 || dy == 0) ? 1f : 1.41421356f);
+        // return cur.G + (neighbor.Pos - cur.Pos).magnitude;  // é¿å…ä½¿ç”¨å¹³æ–¹æ ¹è¿ç®—è€—æ€§èƒ½
     }
 
     public float CalculateH(AStarNode cur, AStarNode target)
     {
-        // Ğ±½Ç¾àÀë
+        // æ–œè§’è·ç¦»
         float dx = Mathf.Abs(target.X - cur.X);
         float dy = Mathf.Abs(target.Y - cur.Y);
         return Mathf.Min(dx, dy) * 1.41421356f + Mathf.Abs(dx - dy);
@@ -191,14 +192,17 @@ public class AStarFindPath
     }
 
     /// <summary>
-    /// A*ºËĞÄÊµÏÖ
+    /// A*æ ¸å¿ƒå®ç°
     /// </summary>
     /// <param name="startGrid"></param>
     /// <param name="targetGrid"></param>
-    /// <param name="walkableInterface">ÅĞ¶Ï¿É´ï½Ó¿ÚÀà£¬µ¥Ò»Ö°Ôğ½âñî</param>
+    /// <param name="walkableInterface">åˆ¤æ–­å¯è¾¾æ¥å£ç±»ï¼Œå•ä¸€èŒè´£è§£è€¦</param>
     /// <returns></returns>
     public List<Vector2Int> FindPath(Vector2Int startGrid, Vector2Int targetGrid, IWalkable walkableInterface = null)
     {
+
+        float startTime1 = Time.realtimeSinceStartup;
+
         m_Walkable = walkableInterface;
         if (startGrid == targetGrid)
         {
@@ -217,40 +221,47 @@ public class AStarFindPath
 
         while (openList.Count > 0)
         {
-            // OpenListÈ¡FÖµ×îĞ¡µÄ
+            // OpenListå–Få€¼æœ€å°çš„
             var curNode = openList.PopMin();
             closeList.Add(curNode.Pos);
 
-            // µ½´ïÄ¿±êµã
+            // åˆ°è¾¾ç›®æ ‡ç‚¹
             if (curNode.X == targetNode.X && curNode.Y == targetNode.Y)
             {
                 var path = GenerateResultPath(curNode);
-                return PathOptimization(path);
+                Debug.Log($"A*æ ¸å¿ƒ ç”Ÿæˆè·¯å¾„è€—æ—¶ {(Time.realtimeSinceStartup - startTime1) * 1000:F3}ms");
+                float startTime2 = Time.realtimeSinceStartup;
+                path = PathOptimization(path);
+                Debug.Log($"A* è·¯å¾„ä¼˜åŒ– {(Time.realtimeSinceStartup - startTime2) * 1000:F3}ms");
+                return path;
             }
 
-            // °Ë·½ÏòÁÚ¾Ó
-            for (int i = 0; i < m_DirectionEight.GetLength(0); i++)
+            // å…«æ–¹å‘é‚»å±…
+            var directionEight = MapUtil.DIRECTION_EIGHT;
+            var directionCount = directionEight.GetLength(0);
+            for (int i = 0; i < directionCount; i++)
             {
-                // walkableÅĞ¶Ï
-                var neighborNode = new AStarNode(new Vector2Int(curNode.X + m_DirectionEight[i, 0], curNode.Y + m_DirectionEight[i, 1]));
+                // walkableåˆ¤æ–­
+                var neighborNode = new AStarNode(new Vector2Int(curNode.X + directionEight[i, 0], curNode.Y + directionEight[i, 1]));
                 if (walkableInterface != null && !walkableInterface.IsWalkable(neighborNode.X, neighborNode.Y))
                 {
                     continue;
                 }
-                // CloseListÅĞ¶Ï
+                // CloseListåˆ¤æ–­
                 if (closeList.Contains(neighborNode.Pos))
                 {
                     continue;
                 }
-                // ¸üĞ¡µÄG»òÕß²»ÔÚOpenListÔò¼ÓÈë
+                // æ›´å°çš„Gæˆ–è€…ä¸åœ¨OpenListåˆ™åŠ å…¥
                 var newG = CalculateG(curNode, neighborNode);
-                if (newG < neighborNode.G || !openList.Contains(neighborNode))
+                var isInOpenList = openList.Contains(neighborNode);
+                if (newG < neighborNode.G || !isInOpenList)
                 {
                     neighborNode.G = newG;
                     neighborNode.Parent = curNode;
-                    if (!openList.Contains(neighborNode))
+                    if (!isInOpenList)
                     {
-                        neighborNode.H = CalculateH(neighborNode, targetNode); // ±»¼ÓÈëµ½OpenList¼ÆËãÒ»¸öH¼´¿É£¬±ÜÃâ·Åµ½ÍâÃæÖØ¸´¼ÆËã
+                        neighborNode.H = CalculateH(neighborNode, targetNode); // è¢«åŠ å…¥åˆ°OpenListè®¡ç®—ä¸€ä¸ªHå³å¯ï¼Œé¿å…æ”¾åˆ°å¤–é¢é‡å¤è®¡ç®—
                         openList.Add(neighborNode);
                     }
                 }
@@ -260,7 +271,7 @@ public class AStarFindPath
     }
 
     /// <summary>
-    /// µ¹ĞòµÃµ½Â·¾¶
+    /// å€’åºå¾—åˆ°è·¯å¾„
     /// </summary>
     /// <param name="node"></param>
     /// <returns></returns>
@@ -285,7 +296,7 @@ public class AStarFindPath
     }
 
     /// <summary>
-    /// step1.Â·¾¶¼ò»¯£¬¹²ÏßµãÉ¾³ı£ºĞ±ÂÊµÄ¶à¸öµãÏàÍ¬Ö»±£ÁôÁ½¸ö¶Ëµã£¬É¾µô¶àÓàµã£¬´ó·ù¶È¼õÉÙºóĞø¼ÆËãÁ¿
+    /// step1.è·¯å¾„ç®€åŒ–ï¼Œå…±çº¿ç‚¹åˆ é™¤ï¼šæ–œç‡çš„å¤šä¸ªç‚¹ç›¸åŒåªä¿ç•™ä¸¤ä¸ªç«¯ç‚¹ï¼Œåˆ æ‰å¤šä½™ç‚¹ï¼Œå¤§å¹…åº¦å‡å°‘åç»­è®¡ç®—é‡
     /// </summary>
     /// <param name="path"></param>
     /// <returns></returns>
@@ -304,7 +315,7 @@ public class AStarFindPath
         for (int i = 2; i < path.Count; i++)
         {
             var curDir = path[i] - path[i - 1];
-            if (curDir != lastDir) // ÒòÎªÁ¬Ğøµã¶¼ÊÇVectorInt£¬ËùÒÔÏòÁ¿²»µÈÔò·½Ïò²»Í¬
+            if (curDir != lastDir) // å› ä¸ºè¿ç»­ç‚¹éƒ½æ˜¯VectorIntï¼Œæ‰€ä»¥å‘é‡ä¸ç­‰åˆ™æ–¹å‘ä¸åŒ
             {
                 result.Add(path[i - 1]);
                 lastDir = curDir;
@@ -317,7 +328,7 @@ public class AStarFindPath
 
 
     /// <summary>
-    /// step2.Ì°ĞÄÊ½LOSÂ·¾¶Æ½»¬£ºACÁ½µã¿ÉÒÔÖ±´ïÔò¿ÉÈ¥µôÖĞ¼äµãB£¬ÓÃBresenhamÉú³ÉÁ½µã¼äµÄÂ·¾¶µãÍ¬Ê±¿¼ÂÇIsWalkable
+    /// step2.è´ªå¿ƒå¼LOSè·¯å¾„å¹³æ»‘ï¼šACä¸¤ç‚¹å¯ä»¥ç›´è¾¾åˆ™å¯å»æ‰ä¸­é—´ç‚¹Bï¼Œç”¨Bresenhamç”Ÿæˆä¸¤ç‚¹é—´çš„è·¯å¾„ç‚¹åŒæ—¶è€ƒè™‘IsWalkable
     /// </summary>
     /// <param name="path"></param>
     /// <returns></returns>
@@ -335,7 +346,7 @@ public class AStarFindPath
         while (start < last)
         {
             result.Add(path[start]);
-            int end = start + 1; // ÖÁÉÙ+1±ÜÃâËÀÑ­»·
+            int end = start + 1; // è‡³å°‘+1é¿å…æ­»å¾ªç¯
             for (int target = last; target > start + 1; target--)
             {
                 if (BresenhamLineCheck(path[start], path[target]))
@@ -352,7 +363,7 @@ public class AStarFindPath
     }
 
     /// <summary>
-    /// Á½µãÊÇ·ñÖ±½Ó¿É´ï¼ì²â£¬¼ì²éÁ½µãÖ®¼äµÄÀëÉ¢µãÊÇ·ñ¶¼¿É´ï£¬ºÍA*µÄwalkableÊ¹ÓÃÏàÍ¬µÄÅĞ¶ÏÌõ¼ş
+    /// ä¸¤ç‚¹æ˜¯å¦ç›´æ¥å¯è¾¾æ£€æµ‹ï¼Œæ£€æŸ¥ä¸¤ç‚¹ä¹‹é—´çš„ç¦»æ•£ç‚¹æ˜¯å¦éƒ½å¯è¾¾ï¼Œå’ŒA*çš„walkableä½¿ç”¨ç›¸åŒçš„åˆ¤æ–­æ¡ä»¶
     /// </summary>
     /// <param name="start"></param>
     /// <param name="target"></param>
@@ -379,7 +390,7 @@ public class AStarFindPath
             {
                 return false;
             }
-            if (x0 == x1 && y0 == y1)  // µ½´ïÖØµã
+            if (x0 == x1 && y0 == y1)  // åˆ°è¾¾é‡ç‚¹
             {
                 break;
             }
@@ -399,9 +410,9 @@ public class AStarFindPath
     }
 
     /// <summary>
-    /// step3.Â·¾¶ÓÅ»¯£¬È¥µôµÚÒ»¸öÂ·¾¶µã£¬±ÜÃâ×ßÏòµÚÒ»¸öÂ·¾¶µãÊ±£¬ÓëÕûÌåÑ°Â·ÕûÌå·½Ïò²»·ûºÏ·´·½Ïò×ßµÄÇé¿ö
-    /// ÎªÊ²Ã´ÏÈLOSÔÙTrim Start£¿ ÒòÎªÏÈTrim Start»áÓ°ÏìLOS½á¹û£¬±ÈÈçÊÀ½ç×ø±êa¶ÔÓ¦¸ñ×Ó×ø±êA£¬Â·¾¶A->B->C£¬LOSÓÅ»¯½á¹ûÎªa->A->C£¬Èç¹ûÏÈTrim Start½á¹û¾Í»á±äÎªa->B->C
-    /// ÎªÊ²Ã´¿ÉÒÔÖ±½ÓÈ¥µôpath[0]ÄØ£¿ ÒòÎªÊÀ½ç×ø±êa¶ÔÓ¦µÄ¸ñ×Ó×ø±êA¾ÍÊÇpath[0]£¬Í¬Ê±A*ºÍLOS¶¼½øĞĞÁËÏàÍ¬µÄÑÏ¸ñwalkable¼ì²â£¨°ë¾¶À©ÕÅ»òÕßĞ±Ïß4·½Ïò¼ì²é£©£¬A->C¿É´ï£¬ÔòËùÓĞÓ³ÉäÎªAµÄÊÀ½ç×ø±êa->C¿É´ï
+    /// step3.è·¯å¾„ä¼˜åŒ–ï¼Œå»æ‰ç¬¬ä¸€ä¸ªè·¯å¾„ç‚¹ï¼Œé¿å…èµ°å‘ç¬¬ä¸€ä¸ªè·¯å¾„ç‚¹æ—¶ï¼Œä¸æ•´ä½“å¯»è·¯æ•´ä½“æ–¹å‘ä¸ç¬¦åˆåæ–¹å‘èµ°çš„æƒ…å†µ
+    /// ä¸ºä»€ä¹ˆå…ˆLOSå†Trim Startï¼Ÿ å› ä¸ºå…ˆTrim Startä¼šå½±å“LOSç»“æœï¼Œæ¯”å¦‚ä¸–ç•Œåæ ‡aå¯¹åº”æ ¼å­åæ ‡Aï¼Œè·¯å¾„A->B->Cï¼ŒLOSä¼˜åŒ–ç»“æœä¸ºa->A->Cï¼Œå¦‚æœå…ˆTrim Startç»“æœå°±ä¼šå˜ä¸ºa->B->C
+    /// ä¸ºä»€ä¹ˆå¯ä»¥ç›´æ¥å»æ‰path[0]å‘¢ï¼Ÿ å› ä¸ºä¸–ç•Œåæ ‡aå¯¹åº”çš„æ ¼å­åæ ‡Aå°±æ˜¯path[0]ï¼ŒåŒæ—¶A*å’ŒLOSéƒ½è¿›è¡Œäº†ç›¸åŒçš„ä¸¥æ ¼walkableæ£€æµ‹ï¼ˆåŠå¾„æ‰©å¼ æˆ–è€…æ–œçº¿4æ–¹å‘æ£€æŸ¥ï¼‰ï¼ŒA->Cå¯è¾¾ï¼Œåˆ™æ‰€æœ‰æ˜ å°„ä¸ºAçš„ä¸–ç•Œåæ ‡a->Cå¯è¾¾
     /// </summary>
     /// <param name="path"></param>
     /// <returns></returns>
